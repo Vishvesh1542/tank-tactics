@@ -439,18 +439,25 @@ class Console:
 
     def _overlay_image(self, im1, im2, x_offset, y_offset):
         # Mutates im1, placing im2 over it at a given offset.
-        img = im1
+        print(im1.shape, im2.shape)
+        img = im1.copy()
         img[y_offset:y_offset+im2.shape[0], x_offset:x_offset+im2.shape[1]] = im2
         return img
 
     def get_game_state_image(self) -> np.ndarray:
         print(self.default_bg_image.shape,
               self.default_tank_image_greyscale.shape)
-        image_new = self.default_bg_image
-        for player, _ in self.players.values():
-            print(player)
-            image_new = self._overlay_image(image_new, self.default_tank_image_greyscale, player[1] * 100 + (player[1] * 5),
-                                            player[0] * 100 + (player[0] * 5))
+        image_new = self.default_bg_image.copy()
+        x, y = 0, 0
+        for row in self.grid:
+            for value in row:
+                if value > 0:
+                    print(x, y)
+                    image_new = self._overlay_image(image_new, self.default_tank_image_greyscale, x * 100 + ((x + 1)* 5),
+                                                y * 100 + ((y + 1) * 5))
+                x += 1
+            x = 0
+            y += 1
         return image_new
 
 
@@ -486,6 +493,7 @@ if __name__ == '__main__':
                 print(f"Error: Code {x}")
             print(f'Moved in 100000 games in {time.time()-t2} seconds')
             img = games[0].get_game_state_image()
+            img = cv2.resize(img, (800, 800))
             cv2.imshow('current sstate', img)
             cv2.waitKey()
             cv2.destroyAllWindows()
