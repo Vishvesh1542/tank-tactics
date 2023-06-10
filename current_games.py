@@ -1,4 +1,3 @@
-import json
 
 _games = {}
 # with open(r'assets/data/games.json') as f:
@@ -16,7 +15,3 @@ def write(key, value, edit=False) -> None:
 
 def rewrite(dict_) -> None:
     _games = dict_
-
-def sync() -> None:
-    with open('assets/data/games.json', encoding="UTF-8", mode='w') as file:
-        json.dump(_games, file)
