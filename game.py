@@ -1,23 +1,30 @@
 import numpy as np
 import random
+import discord
 import time
 import colorama
 import cv2
+from io import BytesIO
 
 
 class Player:
-    name = "Player"
 
-    energy = 0
-    kills = 0
-    eliminated = False
-    killed_by = None
+    def __init__(self, name, icon, _id) -> None:
+        self.image = icon
+        self.score = None
+        self.name = name
+        self.energy = 69
+        self.kills = 0
+        self.eliminated = False
+        self.killed_by = None
+        self._id = _id
 
 
 class TankTactics:
     default_bg_image = cv2.imread('assets/images/board_background.png')
     default_tank_image_greyscale = cv2.imread(
         'assets/images/tank_greyscale.png')
+    default_bg_image = cv2.cvtColor(default_bg_image, cv2.COLOR_RGB2RGBA)
 
     def __init__(self, players: list):
         self.players = {}
@@ -38,6 +45,11 @@ class TankTactics:
                            'down': ['down', 's', '↓'],
                            'left': ['left', 'a', '←'],
                            'right': ['right', 'd', '→']}
+        
+        self.channel_id = None
+        self.message = None
+        self.channel = None
+        self.bot = None
 
     def _set_players_to_optimal_spot(self, players: list) -> np.array:
         no_of_players = len(players)
@@ -92,12 +104,15 @@ class TankTactics:
             self.players['7'] = [(3, 9), players[6]]
             self.players['8'] = [(6, 9), players[7]]
 
+        else:
+            self.players['1'] = [(5, 5), players[0]]
+
         positions = np.zeros((10, 10), np.int32)
         for key, value in self.players.items():
             positions[value[0]] = int(key)
         return positions
 
-    def move(self, player: Player | int, direction: str) -> None | str:
+    async def move(self, player: Player | int, direction: str) -> None | str:
         if isinstance(player, Player):
             player = self._get_player_from_class(player)
 
@@ -139,6 +154,8 @@ class TankTactics:
 
         self.players[str(player)][0] = new_position
         self.players[str(player)][1].energy -= 1
+        
+        await self.update()
         return
 
     # Converting 'up', 'down'.. to tuples which can easily be calculated
@@ -161,6 +178,36 @@ class TankTactics:
     # Getting the current state of the game.
     def _get_grid(self) -> np.ndarray:
         return self.grid
+
+    async def start(self, channel_id: int | str, _dict: dict, bot: discord.Bot) -> None:
+        self.channel_id = channel_id
+        self.bot = bot
+
+        print('starting game')
+
+        image_file = self._get_discord_image_file()
+            
+        channel = bot.get_channel(int(channel_id))
+        self.channel = channel
+
+        message = await channel.send(file=image_file)
+        self.message = message
+
+    async def update(self):
+        await self.message.delete()
+
+        msg = await self.channel.send(file=self._get_discord_image_file())
+
+        self.message = msg
+
+    def _get_discord_image_file(self) -> discord.File:
+        _, png_image = cv2.imencode('.png', self.get_game_state_image())
+
+        with BytesIO(png_image) as binary_stream:
+            image_file = discord.File(
+                fp=binary_stream, filename='game_state.png')
+            return image_file
+            
 
     # Killing tanks nearby ( Feature )
     def blast(self, player: Player | int) -> str | bool:
@@ -214,15 +261,26 @@ class TankTactics:
 
     def _overlay_image(self, im1, im2, x_offset, y_offset):
         # Mutates im1, placing im2 over it at a given offset.
-        img = im1
+        img = im1.copy()
         img[y_offset:y_offset+im2.shape[0], x_offset:x_offset+im2.shape[1]] = im2
         return img
 
     def get_game_state_image(self) -> np.ndarray:
-        image_new = self.default_bg_image
-        for player, _ in self.players.items():
-            image_new = self._overlay_image(image_new, self.default_bg_image, player[1] * 100 + (player[1] * 5),
-                                            player[0] * 100 + (player[0] * 5))
+        t = time.time()
+        image_new = self.default_bg_image.copy()
+        for row in self.grid:
+            for value in row:
+                if value > 0:
+                    player = self.players[str(value)]
+                    player_image = player[1].image
+
+                    if player_image is None:
+                        player_image = self.default_bg_image.copy()
+                    image_new = self._overlay_image(image_new, player_image, player[0][1] * 100 + ((player[0][1] + 1) * 5),
+                                                    player[0][0] * 100 + ((player[0][0] + 1) * 5))
+
+        print(f'Created image in {time.time() - t} seconds')
+        return image_new
 
 
 class Console:
@@ -303,6 +361,9 @@ class Console:
             self.players['6'] = [(6, 6), players[5]]
             self.players['7'] = [(3, 9), players[6]]
             self.players['8'] = [(6, 9), players[7]]
+
+        else:
+            self.players['1'] = [(5, 5), players[0]]
 
         positions = np.zeros((10, 10), np.int32)
         for key, value in self.players.items():
@@ -444,22 +505,6 @@ class Console:
         img[y_offset:y_offset+im2.shape[0], x_offset:x_offset+im2.shape[1]] = im2
         return img
 
-    def get_game_state_image(self) -> np.ndarray:
-        print(self.default_bg_image.shape,
-              self.default_tank_image_greyscale.shape)
-        image_new = self.default_bg_image.copy()
-        x, y = 0, 0
-        for row in self.grid:
-            for value in row:
-                if value > 0:
-                    print(x, y)
-                    image_new = self._overlay_image(image_new, self.default_tank_image_greyscale, x * 100 + ((x + 1)* 5),
-                                                y * 100 + ((y + 1) * 5))
-                x += 1
-            x = 0
-            y += 1
-        return image_new
-
 
 if __name__ == '__main__':
     time_ = time.time()
@@ -492,11 +537,7 @@ if __name__ == '__main__':
             if x is not None:
                 print(f"Error: Code {x}")
             print(f'Moved in 100000 games in {time.time()-t2} seconds')
-            img = games[0].get_game_state_image()
-            img = cv2.resize(img, (800, 800))
-            cv2.imshow('current sstate', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
+
 
         for game in games:
             game.add_energy()
