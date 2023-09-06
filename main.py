@@ -91,6 +91,8 @@ class Commands(commands.Cog):
     async def check_time(self):
         await utils.check_start(bot)
 
+with open('token') as f:
+    token = f.read()
 
 bot.add_cog(Commands(bot))
-bot.run(token="MTEwNTg2NzQ4NTkwNDkxNjUxMA.GvKTxU.Yw4H5E_hghnjc_yqlTnhqqRFmlUJU43TUAeUpA")
+bot.run(token=token)
