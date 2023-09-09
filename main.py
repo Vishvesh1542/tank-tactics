@@ -1,7 +1,9 @@
 import discord
 from discord import Option
+from discord.ext import tasks
 
 import image_generator
+import game_manager
 import commands
 
 
@@ -11,6 +13,12 @@ with open('token', 'r') as file:
     token = file.read()
    
 image_generator.init()
-commands.init(bot_=bot)
+game_manager.init(bot)
+commands.init(bot)
 
+@tasks.loop(seconds=1)
+async def per_minute():
+    await game_manager.listen()
+
+per_minute.start()
 bot.run(token)
