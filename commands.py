@@ -18,6 +18,9 @@ def init(bot_: discord.Bot) -> None:
 # Adds all the functions
 def add_commands() -> None:
     add_command('new', 'Creates a new tank tactics game!', new)
+    add_command('move', 'Move in a game.', move, Option(
+        type=str, description='direction (w, a, s, d)', name='direction'),
+        Option(int, 'The id of the game. ', name='id', required=False))
 
 def add_command(name:str, description: str, callback:callable,
                 option_1: Option=None, option_2: Option=None,
@@ -81,4 +84,17 @@ def process_message(message: discord.Message) -> None:
     
 async def new(ctx: discord.ApplicationContext):
     embed, view = await game_manager.new(ctx)
-    await send_message(ctx, embed=embed, view=view)
+    try:
+        await send_message(ctx, embed=embed, view=view)
+    except discord.Forbidden:
+        if isinstance(ctx, discord.Message):
+            user = ctx.author
+        else:
+            user = ctx.user
+            await user.send('I do not have permissions\
+to send messages in the channel.')
+
+
+async def move(ctx: discord.ApplicationContext, 
+               direction: any('w', 'a', 's', 'd'), id: int=None):
+    await game_manager.move()

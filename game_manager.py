@@ -4,7 +4,7 @@ import cv2
 import io
 
 from image_generator import generate_image
-from game import Game
+from game import Game, Player
 import utils
 
 def init(_bot) -> None:
@@ -17,12 +17,7 @@ def init(_bot) -> None:
 
     print('[ INFO ]     Initialized game manager.')
 
-class Player:
-    def __init__(self, user_class) -> None:
-        self.user_class = user_class
-        self.block_number = 1
-        self.x_pos = 0
-        self.y_pos = 0
+
 
 class StartGameView(discord.ui.View):
 
@@ -60,12 +55,16 @@ async def listen_for_join(ctx: discord.ApplicationContext, timeout: int=86400):
     await call(time.time() + timeout, start, [ctx])
     return view
 
+async def update_image(ctx):
+    pass
+
 async def start(variables: list):
     ctx = variables[0]
 
     if len(games[ctx.channel_id]['players']) < 2:
         await ctx.send('Game has ended because of insufficient players.')
         return
+    
     games[ctx.channel_id]['state'] = 'started'
     game = Game(games[ctx.channel_id]['players'])
     games[ctx.channel_id]['game'] = game
@@ -107,3 +106,44 @@ async def new(ctx: discord.ApplicationContext):
                               'start_time': time.time(), 'state': 'listening',
                               'game': None}
     return embed, view  
+
+async def move(ctx: discord.ApplicationContext, direction: str, _id: int=None):
+    global games
+    direction = utils.get_direction(direction)
+
+    if not direction:
+        return 'Error: Invalid direction!'
+    
+    if not _id:
+        if ctx.channel_id not in games:
+            return 'No raid found in this channel.'
+        game = games[ctx.channel_id]
+        channel = ctx.channel_id
+    else:
+        found = False
+        for ch_id, game_ in games.items():
+            if game_['id'] == _id:
+                game = game_
+                found = True
+                channel= ch_id
+                continue
+        if not found:
+            return 'Error: Invalid id!'
+        
+    found = False
+    for player in game['players']:
+        if player.user_class.id == ctx.user.id:
+            player_class = player
+            found = True
+            continue
+    if not found:
+        return 'You are not in the game!'
+    
+    
+    message = game['game'].move(direction, player_class)
+    channel
+    
+    
+
+
+    
