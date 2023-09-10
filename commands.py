@@ -53,28 +53,37 @@ def add_command(name:str, description: str, callback:callable,
 
 async def send_message(ctx, message: str=None, view: discord.ui.View=None,
                     embed: discord.Embed=None, paginator: str=None):
-    if not paginator:
-        if isinstance(ctx, discord.Message):
-            await ctx.channel.send(content=message, embed=embed,
-                                   reference=ctx, view=view)
+    try:
+        if not paginator:
+            if isinstance(ctx, discord.Message):
+                await ctx.channel.send(content=message, embed=embed,
+                                    reference=ctx, view=view)
+            else:
+                if embed:
+                    embed.color = random.choice([
+            0x708090,  # Slate Gray
+            0x556B2F,  # Olive Green
+            0x008080,  # Teal Blue
+            0xDAA520,  # Muted Gold
+            0xD87093,  # Dusty Rose
+            0x000080,  # Navy Blue
+            0x8B4513,  # Earthy Brown
+            0xE6E6FA,  # Soft Lavender
+            0x36454F,  # Charcoal Gray
+            0x98FB98   # Pastel Mint Green
+            ]
+                    )
+                await ctx.respond(message, embed=embed, view=view)
+        
         else:
-            embed.color = random.choice([
-    0x708090,  # Slate Gray
-    0x556B2F,  # Olive Green
-    0x008080,  # Teal Blue
-    0xDAA520,  # Muted Gold
-    0xD87093,  # Dusty Rose
-    0x000080,  # Navy Blue
-    0x8B4513,  # Earthy Brown
-    0xE6E6FA,  # Soft Lavender
-    0x36454F,  # Charcoal Gray
-    0x98FB98   # Pastel Mint Green
-    ]
-            )
-            await ctx.respond(message, embed=embed, view=view)
-    
-    else:
-        raise NotImplementedError('Do it fast')
+            raise NotImplementedError('Do it fast')
+    except discord.Forbidden:
+        if isinstance(ctx, discord.Message):
+            user = ctx.author
+        else:
+            user = ctx.user
+            await user.send('I do not have permissions\
+to send messages in the channel.')
 
 def process_message(message: discord.Message) -> None:
     content = message.content
@@ -84,17 +93,11 @@ def process_message(message: discord.Message) -> None:
     
 async def new(ctx: discord.ApplicationContext):
     embed, view = await game_manager.new(ctx)
-    try:
-        await send_message(ctx, embed=embed, view=view)
-    except discord.Forbidden:
-        if isinstance(ctx, discord.Message):
-            user = ctx.author
-        else:
-            user = ctx.user
-            await user.send('I do not have permissions\
-to send messages in the channel.')
+    await send_message(ctx, embed=embed, view=view)
 
 
 async def move(ctx: discord.ApplicationContext, 
-               direction: any('w', 'a', 's', 'd'), id: int=None):
-    await game_manager.move()
+               direction: any(['w', 'a', 's', 'd']), id: int=None):
+    message = await game_manager.move(ctx=ctx, direction_=direction, 
+                                      _id=id)
+    await send_message(ctx=ctx, message=message)

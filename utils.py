@@ -14,14 +14,3 @@ def find_missing_number(nums: list):
             return expected_num
     
     return expected_num
-
-def get_direction(direction_raw: str) -> tuple:
-    direction_raw = direction_raw.lower()
-    maps = {(0, -1): ['w', 'up', '↑'],
-            (-1, 0): ['a', 'left', '←'],
-            (0, 1): ['s', 'down', '↓'], 
-            (1, 0): ['d', 'right', '→']}
-    for _direction, values in maps.items():
-        if direction_raw in values:
-            return _direction
-    return None

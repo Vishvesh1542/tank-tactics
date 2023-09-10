@@ -61,27 +61,17 @@ async def update_image(ctx):
 async def start(variables: list):
     ctx = variables[0]
 
-    if len(games[ctx.channel_id]['players']) < 2:
-        await ctx.send('Game has ended because of insufficient players.')
-        return
+    # !if len(games[ctx.channel_id]['players']) < 2:
+    # !    await ctx.send('Game has ended because of insufficient players.')
+    # !    return
     
     games[ctx.channel_id]['state'] = 'started'
-    game = Game(games[ctx.channel_id]['players'])
+    _id = games[ctx.channel_id]['id']
+    game = Game(games[ctx.channel_id]['players'],
+                 update_channel=ctx.channel, _id=_id)
     games[ctx.channel_id]['game'] = game
-    game_state_image = generate_image(game.grid)
-
-        # Convert the OpenCV image to bytes
-    _, img_bytes = cv2.imencode('.png', game_state_image)
-    img_bytes = img_bytes.tobytes()
-
-    # Create an embed with an image
-    embed = discord.Embed(title=
-            f'Tank Tactics! id: `{games[ctx.channel_id]["id"]}`')
-    embed.set_image(url="attachment://image.png")
-
-    # Send the embed with the image
+    await game.update()
     print('[ INFO ]     game started')
-    await ctx.send(embed=embed, file=discord.File(io.BytesIO(img_bytes), filename='image.png'))
 
 async def new(ctx: discord.ApplicationContext):
     global used_ids
@@ -107,9 +97,9 @@ async def new(ctx: discord.ApplicationContext):
                               'game': None}
     return embed, view  
 
-async def move(ctx: discord.ApplicationContext, direction: str, _id: int=None):
+async def move(ctx: discord.ApplicationContext, direction_: str, _id: int=None):
     global games
-    direction = utils.get_direction(direction)
+    direction = Game.get_direction(direction_)
 
     if not direction:
         return 'Error: Invalid direction!'
@@ -118,7 +108,7 @@ async def move(ctx: discord.ApplicationContext, direction: str, _id: int=None):
         if ctx.channel_id not in games:
             return 'No raid found in this channel.'
         game = games[ctx.channel_id]
-        channel = ctx.channel_id
+
     else:
         found = False
         for ch_id, game_ in games.items():
@@ -136,12 +126,13 @@ async def move(ctx: discord.ApplicationContext, direction: str, _id: int=None):
             player_class = player
             found = True
             continue
+
     if not found:
         return 'You are not in the game!'
     
     
-    message = game['game'].move(direction, player_class)
-    channel
+    message = await game['game'].move(direction, player_class)
+    return message
     
     
 
