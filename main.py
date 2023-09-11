@@ -16,6 +16,7 @@ image_generator.init()
 game_manager.init(bot)
 commands.init(bot)
 
+# ! Remove the seconds
 @tasks.loop(seconds=1)
 async def per_minute():
     await game_manager.listen()
