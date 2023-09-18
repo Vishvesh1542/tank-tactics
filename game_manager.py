@@ -134,6 +134,33 @@ async def move(ctx: discord.ApplicationContext, direction_: str, _id: int=None):
     message = await game['game'].move(direction, player_class)
     return message
     
+async def blast(ctx: discord.ApplicationContext, _id: int=None):
+
+    if not _id:
+        if ctx.channel_id not in games:
+            return 'No raid found in this channel.'
+        game = games[ctx.channel_id]
+
+    else:
+        found = False
+        for ch_id, game_ in games.items():
+            if game_['id'] == _id:
+                game = game_
+                found = True
+                channel= ch_id
+                continue
+        if not found:
+            return 'Error: Invalid id!'
+        
+    found = False
+    for player in game['players']:
+        if player.user_class.id == ctx.user.id:
+            player_class = player
+            found = True
+            continue
+
+    if not found:
+        return 'You are not in the game!'
     
 
 

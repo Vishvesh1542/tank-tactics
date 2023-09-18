@@ -21,6 +21,9 @@ def add_commands() -> None:
     add_command('move', 'Move in a game.', move, Option(
         type=str, description='direction (w, a, s, d)', name='direction'),
         Option(int, 'The id of the game. ', name='id', required=False))
+    add_command('blast', 'Blast in a game.', blast, Option(
+        type=int, name='id', description='The id of the game.', required=False
+    ))
 
 def add_command(name:str, description: str, callback:callable,
                 option_1: Option=None, option_2: Option=None,
@@ -100,4 +103,8 @@ async def move(ctx: discord.ApplicationContext,
                direction: any(['w', 'a', 's', 'd']), id: int=None):
     message = await game_manager.move(ctx=ctx, direction_=direction, 
                                       _id=id)
+    await send_message(ctx=ctx, message=message)
+
+async def blast(ctx: discord.ApplicationContext, _id: int=None):
+    message = await game_manager.blast(ctx=ctx, _id = _id)
     await send_message(ctx=ctx, message=message)
