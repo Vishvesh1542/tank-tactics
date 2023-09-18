@@ -44,6 +44,7 @@ async def listen():
             await listener['callback'](listener['var'])
         else:
             new_list.append(listener)
+    print(new_list)
     
     listeners = new_list
 
@@ -55,16 +56,12 @@ async def listen_for_join(ctx: discord.ApplicationContext, timeout: int=86400):
     await call(time.time() + timeout, start, [ctx])
     return view
 
-async def update_image(ctx):
-    pass
-
 async def start(variables: list):
     ctx = variables[0]
 
     # !if len(games[ctx.channel_id]['players']) < 2:
     # !    await ctx.send('Game has ended because of insufficient players.')
     # !    return
-    
     games[ctx.channel_id]['state'] = 'started'
     _id = games[ctx.channel_id]['id']
     game = Game(games[ctx.channel_id]['players'],
@@ -72,6 +69,36 @@ async def start(variables: list):
     games[ctx.channel_id]['game'] = game
     await game.update()
     print('[ INFO ]     game started')
+
+async def is_in_game(ctx: discord.ApplicationContext, _id: int=None):   
+    if not _id:
+        channel = ctx.channel
+        if ctx.channel_id not in games:
+            return 'No raid found in this channel.'
+        game = games[ctx.channel_id]
+
+    else:
+        found = False
+        for ch_id, game_ in games.items():
+            if game_['id'] == _id:
+                game = game_
+                found = True
+                channel= ch_id
+                continue
+        if not found:
+            return 'Error: Invalid id!'
+        
+    found = False
+    for player in game['players']:
+        if player.user_class.id == ctx.user.id:
+            player_class = player
+            found = True
+            continue
+    
+    if not found:
+        return 'You are not in the game!'
+    
+    return game, channel, player_class
 
 async def new(ctx: discord.ApplicationContext):
     global used_ids
@@ -84,6 +111,7 @@ async def new(ctx: discord.ApplicationContext):
                         value='use `/new`', inline=False)
         return embed, None
     
+    # ! Change the 5 seconds to appropriate time.
     view = await listen_for_join(ctx, timeout=5)
 
 
@@ -101,66 +129,25 @@ async def move(ctx: discord.ApplicationContext, direction_: str, _id: int=None):
     global games
     direction = Game.get_direction(direction_)
 
-    if not direction:
-        return 'Error: Invalid direction!'
-    
-    if not _id:
-        if ctx.channel_id not in games:
-            return 'No raid found in this channel.'
-        game = games[ctx.channel_id]
-
+    values = await is_in_game(ctx, _id=_id)
+    if isinstance(values, str):
+        return values
     else:
-        found = False
-        for ch_id, game_ in games.items():
-            if game_['id'] == _id:
-                game = game_
-                found = True
-                channel= ch_id
-                continue
-        if not found:
-            return 'Error: Invalid id!'
-        
-    found = False
-    for player in game['players']:
-        if player.user_class.id == ctx.user.id:
-            player_class = player
-            found = True
-            continue
-
-    if not found:
-        return 'You are not in the game!'
-    
+        game, channel, player_class =values
     
     message = await game['game'].move(direction, player_class)
     return message
     
 async def blast(ctx: discord.ApplicationContext, _id: int=None):
 
-    if not _id:
-        if ctx.channel_id not in games:
-            return 'No raid found in this channel.'
-        game = games[ctx.channel_id]
+    values = await is_in_game(ctx, _id)
+    if isinstance(values, str):
+        return values
 
     else:
-        found = False
-        for ch_id, game_ in games.items():
-            if game_['id'] == _id:
-                game = game_
-                found = True
-                channel= ch_id
-                continue
-        if not found:
-            return 'Error: Invalid id!'
-        
-    found = False
-    for player in game['players']:
-        if player.user_class.id == ctx.user.id:
-            player_class = player
-            found = True
-            continue
+        game, channel, player_class = values
 
-    if not found:
-        return 'You are not in the game!'
+    return await game['game'].blast(player_class)
     
 
 

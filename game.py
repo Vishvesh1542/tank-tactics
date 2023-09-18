@@ -4,6 +4,7 @@ import random
 import discord
 import io
 import cv2
+import asyncio
 
 from image_generator import generate_image
 
@@ -11,9 +12,16 @@ class Player:
     def __init__(self, user_class) -> None:
         self.user_class = user_class
         self.block_number = 1
+
         self.x_pos = 0
         self.y_pos = 0
+
         self.is_dead = False
+        self.kills = []
+        self.hero = 'becky'
+
+        # ! Change back
+        self.energy = 1000
     
     async def die(self) -> None:
         self.is_dead = True
@@ -24,15 +32,29 @@ class Game:
                  _id: int) -> None:
         self.players = players
 
+        # Setting up variables
         self.update_channel = update_channel
         self.previous_message = None
         self.game_id = _id
 
+        # creating grid
         if len(players) < 10:
             self.grid = np.zeros((10, 10))
         else:
             self.grid = np.zeros((25, 25))
         self._generate_start_positions(players)
+
+        try:
+            # Loading in all the .json files
+            with open(r"data/blast_map.json", "r") as file:
+                self.blast_map = json.load(file)
+                print('[ INFO ]     Loaded blast map.')
+            
+            with open(r"data/energy_costs.json", "r") as file:
+                self.energy_costs = json.load(file)
+                print('[ INFO ]     Loaded energy costs.')
+        except Exception as e:
+            print(e)
     
     # Generates where the players starts at the start of game
     def _generate_start_positions(self, players: list) -> None:
@@ -94,9 +116,28 @@ class Game:
                 await old_message.delete()
                 return True
         except discord.Forbidden:
+            print(' [ ERROR ]     Cannot update message. discord.Forbidden!')
             return False
-        
 
+    async def _get_blast_blocks(self, hero):
+        if hero in self.blast_map:
+            return self.blast_map[hero]
+        return self.blast_map['normal']
+    
+    async def _get_energy_costs(self, hero, blast=False):
+        cost = 0
+        if hero in self.energy_costs:
+            if blast:
+                cost = self.energy_costs[hero]['blast']
+            else:
+                cost = self.energy_costs[hero]['move']
+        else:
+            if blast:
+                cost = self.energy_costs['normal']['blast']
+            else:
+                cost = self.energy_costs['normal']['move']
+
+        return cost
 
     async def _move_to_grid(self, old_position: tuple, new_position: tuple,
                        block: int, player: Player):
@@ -116,6 +157,11 @@ class Game:
     async def move(self, direction: tuple, player: Player):
         player_x = player.x_pos
         player_y = player.y_pos
+
+        energy_cost = await self._get_energy_costs(player.hero)
+        if energy_cost < energy_cost:
+            return 'Sorry, you do not have enough energy to move.'
+        
         
         if direction == 'a':
             if player_x < 1:
@@ -148,6 +194,7 @@ class Game:
                             (player_x, player_y + 1), player.block_number,
                             player)
 
+        player.energy -= energy_cost
         result = await self.update()
         if not result:
             return f'You have moved! But I do not have access to send messages :('
@@ -157,4 +204,48 @@ class Game:
             \n You also killed {did_kill.user_class.display_name}!'   
         return 'Successfully moved!'
             
- 
+    async def _get_player(self, x, y) -> Player | None:
+        for player in self.players:
+            if player.x_pos == x and player.y_pos == y:
+                return player
+        return False
+
+    async def blast(self, player: Player) -> str:
+        energy_cost = await self._get_energy_costs(
+            player.hero, True)
+        if player.energy < energy_cost:
+            return 'Sorry, you do not have enough energy to blast.'
+
+        directions = await self._get_blast_blocks(player.hero)
+        killed = []
+        killed_string = None
+
+        for direction in directions:
+            x = player.x_pos + direction[0]
+            y = player.y_pos + direction[1]
+
+            other_player = await self._get_player(x, y)
+            if other_player:
+                await other_player.die()
+                killed.append(other_player)
+                killed_string += other_player.user_class.name + ' '
+                player.kills.append(other_player)
+
+        player.energy -= energy_cost
+
+        result = await self.update()
+        if not result:
+
+            if not killed_string:
+                return 'Successfully blasted! You did not kill anyone.' + \
+                    ' But I do not have the permission to send the game state :('
+            else:
+                return 'Sucessfully blasted! You killed: ' + killed_string + \
+                    ' But I do not have the permission to send the game state :('
+        else:
+        
+            if not killed_string:
+                return 'Successfully blasted! You did not kill anyone.'   
+            else:
+                return 'Sucessfully blasted! You killed: ' + killed_string
+                
