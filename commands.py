@@ -25,6 +25,17 @@ def add_commands() -> None:
         type=int, name='id', description='The id of the game.', required=False
     ))
 
+    # Our add command function only supports 2 variables so making an exception
+    @commands.slash_command(name='info', description='view the info of any tank!',
+    options=[Option(name='x', description='The x coordinate of the tank. (1-10)',
+            type=int), 
+            Option(name='y', description='The y coordinate of the tank. (1-10)',
+            type=int),
+            Option(name='id', description='The id of the game.', type=int,
+                   required=False)])
+    async def func(ctx, x, y, id):
+        await info(ctx, x, y, id)
+
 def add_command(name:str, description: str, callback:callable,
                 option_1: Option=None, option_2: Option=None,
                  group: discord.SlashCommandGroup=None):
@@ -98,7 +109,6 @@ async def new(ctx: discord.ApplicationContext):
     embed, view = await game_manager.new(ctx)
     await send_message(ctx, embed=embed, view=view)
 
-
 async def move(ctx: discord.ApplicationContext, 
                direction: any(['w', 'a', 's', 'd']), id: int=None):
     message = await game_manager.move(ctx=ctx, direction_=direction, 
@@ -108,3 +118,7 @@ async def move(ctx: discord.ApplicationContext,
 async def blast(ctx: discord.ApplicationContext, _id: int=None):
     message = await game_manager.blast(ctx=ctx, _id = _id)
     await send_message(ctx=ctx, message=message)
+
+async def info(ctx: discord.ApplicationContext, x: int, y: int,
+               _id: int=None):
+    message = await game_manager.info(ctx, x, y, _id)

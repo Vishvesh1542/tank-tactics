@@ -44,7 +44,6 @@ async def listen():
             await listener['callback'](listener['var'])
         else:
             new_list.append(listener)
-    print(new_list)
     
     listeners = new_list
 
@@ -149,6 +148,14 @@ async def blast(ctx: discord.ApplicationContext, _id: int=None):
 
     return await game['game'].blast(player_class)
     
+async def info(ctx: discord.ApplicationContext, x: int, y: int, _id: int=None):
+    values = await is_in_game(ctx, _id)
 
+    if isinstance(values, str):
+        return values
+    else:
+        game, channel, player_class = values
+    
+    return "Error: Not implemented."
 
     

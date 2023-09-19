@@ -145,7 +145,7 @@ class Game:
         new_block = self.grid[new_position[1], new_position[0]]
         player.x_pos = new_position[0]
         player.y_pos = new_position[1]
-        if new_block != 0:
+        if new_block >   0:
             for player_2 in self.players:
                 if player_2.x_pos == new_position[0] and\
                     player_2.y_pos == new_position[1]:
@@ -211,6 +211,7 @@ class Game:
         return False
 
     async def blast(self, player: Player) -> str:
+        # ! Not fully tested
         energy_cost = await self._get_energy_costs(
             player.hero, True)
         if player.energy < energy_cost:
@@ -223,12 +224,13 @@ class Game:
         for direction in directions:
             x = player.x_pos + direction[0]
             y = player.y_pos + direction[1]
+            self.grid[y, x] = -1
 
             other_player = await self._get_player(x, y)
             if other_player:
                 await other_player.die()
                 killed.append(other_player)
-                killed_string += other_player.user_class.name + ' '
+                killed_string += other_player.user_class.display_name + ' '
                 player.kills.append(other_player)
 
         player.energy -= energy_cost
