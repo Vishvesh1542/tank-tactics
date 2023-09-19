@@ -5,7 +5,7 @@ import time
 
 # Initialize all the file reading
 def init() -> None:
-    global block_map, block_size
+    global block_map, block_size, info
     block_size = 75
     # block map
     with open("data/block_map.json", "r") as file:
@@ -14,6 +14,10 @@ def init() -> None:
         # Turning all the values back to integers
         for block in _block_map:
             block_map[int(block)] = _block_map[block]
+
+    # Theme
+    with open("data/info.json", "r") as file:
+        info = json.load(file)
 
     print('[ INFO ]     Initialized image generation.')
             
@@ -36,19 +40,29 @@ def _get_bg(theme: str='normal'):
         cv2.imread(f"images/{theme}/{block_map[0]}.png"),
           (block_size * 10, block_size * 10))
 
-def generate_image(board: np.array, theme: str ='normal'):
+def generate_image(board: np.array,  players: list, theme: str =None):
+    if not theme:
+        global info
+        theme = info["theme"]
     image = _get_bg(theme)
     x, y = 0, 0
     t_1 = time.time()
     for row in board:
         for block in row:
-            if block != 0:
+            if block < 0:
                 overlay_image = _get_image(block=block, theme=theme)
                 image = _overlay_image(im1=image, im2=overlay_image,
                             x_offset=x * block_size, y_offset=y * block_size)
             x += 1
         x = 0
         y += 1
+    for player in players:
+        x_pos = player.x_pos * 75
+        y_pos = player.y_pos * 75
+
+        image = _overlay_image(image, player.block, 
+                               x_pos, y_pos)
+
     t_2 = time.time()
     print('[ INFO ]     Generated image in ' +  str(t_2-t_1) + ' seconds')
     return image

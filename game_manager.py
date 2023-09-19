@@ -1,7 +1,8 @@
 import discord
 import time
 import cv2
-import io
+import numpy as np
+import aiohttp
 
 from image_generator import generate_image
 from game import Game, Player
@@ -17,7 +18,19 @@ def init(_bot) -> None:
 
     print('[ INFO ]     Initialized game manager.')
 
+async def download_image(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            image_ = await response.read()
+            return image_
 
+
+async def get_image(url):
+    image_raw = await download_image(url)
+    np_image = np.frombuffer(image_raw, np.uint8)
+    image_ = cv2.imdecode(np_image, cv2.IMREAD_UNCHANGED)
+    image =  cv2.resize(image_, (75, 75))
+    return cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
 
 class StartGameView(discord.ui.View):
 
@@ -30,11 +43,19 @@ class StartGameView(discord.ui.View):
                           games[interaction.channel_id]['players']]
         if interaction.user not in player_classes:
             games[interaction.channel_id]['players'].append(
-                Player(interaction.user)
+                Player(interaction.user, 
+                       await get_user_profile_image(interaction.user))
             )
             await interaction.response.send_message('Successfully joined game!')
         else:
             await interaction.response.send_message('You are already in the game!')
+
+async def get_user_profile_image(user: discord.User):
+    if user.avatar is None:
+        return None
+    url = user.avatar.url
+    image = await get_image(url)
+    return image
 
 async def listen():
     global listeners
@@ -119,7 +140,8 @@ async def new(ctx: discord.ApplicationContext):
     embed.add_field(name=f"id:  {highest_id}", value=" ")
 
     games[ctx.channel_id] = {'id': highest_id, 'author': ctx.user,
-                              'players': [Player(ctx.user)],
+                              'players': [Player(ctx.user,
+                                await get_user_profile_image(ctx.user))],
                               'start_time': time.time(), 'state': 'listening',
                               'game': None}
     return embed, view  
@@ -127,6 +149,8 @@ async def new(ctx: discord.ApplicationContext):
 async def move(ctx: discord.ApplicationContext, direction_: str, _id: int=None):
     global games
     direction = Game.get_direction(direction_)
+    if not direction:
+        return 'Invalid direction!'
 
     values = await is_in_game(ctx, _id=_id)
     if isinstance(values, str):

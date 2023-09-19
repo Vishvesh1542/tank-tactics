@@ -6,12 +6,18 @@ import io
 import cv2
 import asyncio
 
-from image_generator import generate_image
+from image_generator import generate_image, _get_image
+
+global info
 
 class Player:
-    def __init__(self, user_class) -> None:
+    def __init__(self, user_class, block_image: None, block_number: int=1) -> None:
         self.user_class = user_class
-        self.block_number = 1
+        self.block = block_image
+        self.block_number = block_number
+
+        if block_image is None:
+            self.fetch_image()
 
         self.x_pos = 0
         self.y_pos = 0
@@ -25,6 +31,9 @@ class Player:
     
     async def die(self) -> None:
         self.is_dead = True
+    
+    def fetch_image(self) -> None:
+        self.block = _get_image(self.block_number)
 
 class Game:
     def __init__(self, players: list | tuple, 
@@ -62,8 +71,8 @@ class Game:
         
         # Define the starting positions for each number of players
         starting_positions = {
-            1: [(5, 5)],
-            2: [(1, 5), (8, 5)],
+            1: [(5, 2)],
+            2: [(7, 5), (8, 5)],
             3: [(4, 2), (1, 5), (7, 5)],
             4: [(1, 1), (8, 1), (1, 8), (8, 8)],
             5: [(4, 1), (2, 3), (6, 3), (2, 7), (6, 7)],
@@ -95,9 +104,9 @@ class Game:
         return None
     
     async def update(self) -> None:
-        game_state_image = generate_image(self.grid)
+        game_state_image = generate_image(self.grid, self.players)
 
-            # Convert the OpenCV image to bytes
+        # Convert the OpenCV image to bytes
         _, img_bytes = cv2.imencode('.png', game_state_image)
         img_bytes = img_bytes.tobytes()
 
@@ -158,6 +167,9 @@ class Game:
         player_x = player.x_pos
         player_y = player.y_pos
 
+        if player.is_dead:
+            return 'Sorry, you are dead.'
+
         energy_cost = await self._get_energy_costs(player.hero)
         if energy_cost < energy_cost:
             return 'Sorry, you do not have enough energy to move.'
@@ -211,15 +223,19 @@ class Game:
         return False
 
     async def blast(self, player: Player) -> str:
-        # ! Not fully tested
+
+        if player.is_dead:
+            return 'Sorry, you are dead.'
+
         energy_cost = await self._get_energy_costs(
             player.hero, True)
         if player.energy < energy_cost:
             return 'Sorry, you do not have enough energy to blast.'
 
+
         directions = await self._get_blast_blocks(player.hero)
         killed = []
-        killed_string = None
+        killed_string = ''
 
         for direction in directions:
             x = player.x_pos + direction[0]
@@ -238,7 +254,7 @@ class Game:
         result = await self.update()
         if not result:
 
-            if not killed_string:
+            if killed_string == '':
                 return 'Successfully blasted! You did not kill anyone.' + \
                     ' But I do not have the permission to send the game state :('
             else:
@@ -246,7 +262,7 @@ class Game:
                     ' But I do not have the permission to send the game state :('
         else:
         
-            if not killed_string:
+            if killed_string == '':
                 return 'Successfully blasted! You did not kill anyone.'   
             else:
                 return 'Sucessfully blasted! You killed: ' + killed_string
