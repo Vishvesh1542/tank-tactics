@@ -24,17 +24,21 @@ def add_commands() -> None:
     add_command('blast', 'Blast in a game.', blast, Option(
         type=int, name='id', description='The id of the game.', required=False
     ))
-
+    add_command('image', 'nothing', f)
     # Our add command function only supports 2 variables so making an exception
     @commands.slash_command(name='info', description='view the info of any tank!',
-    options=[Option(name='x', description='The x coordinate of the tank. (1-10)',
+    options=[Option(int, name='x', description='The x coordinate of the tank. (1-10)',
             type=int), 
-            Option(name='y', description='The y coordinate of the tank. (1-10)',
-            type=int),
-            Option(name='id', description='The id of the game.', type=int,
-                   required=False)])
-    async def func(ctx, x, y, id):
-        await info(ctx, x, y, id)
+            Option(int, name='y', description='The y coordinate of the tank. (1-10)'),
+            Option(int, name='id', description='The id of the game.',
+                   required=False)],
+    )
+    async def func(ctx, x, y, id: int=None):
+        await info(ctx, int(x), int(y), id)
+    bot.add_application_command(func)
+
+async def f(ctx):
+    print('got')
 
 def add_command(name:str, description: str, callback:callable,
                 option_1: Option=None, option_2: Option=None,
@@ -119,6 +123,11 @@ async def blast(ctx: discord.ApplicationContext, _id: int=None):
     message = await game_manager.blast(ctx=ctx, _id = _id)
     await send_message(ctx=ctx, message=message)
 
+# TODO: implement @mentions also. 
 async def info(ctx: discord.ApplicationContext, x: int, y: int,
                _id: int=None):
     message = await game_manager.info(ctx, x, y, _id)
+    if isinstance(message, str):
+        await send_message(ctx=ctx, message=message)
+    else:
+        await send_message(ctx=ctx, embed=message)

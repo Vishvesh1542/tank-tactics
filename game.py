@@ -71,8 +71,8 @@ class Game:
         
         # Define the starting positions for each number of players
         starting_positions = {
-            1: [(5, 2)],
-            2: [(7, 5), (8, 5)],
+            1: [(0, 0)],
+            2: [(0, 0), (8, 5)],
             3: [(4, 2), (1, 5), (7, 5)],
             4: [(1, 1), (8, 1), (1, 8), (8, 8)],
             5: [(4, 1), (2, 3), (6, 3), (2, 7), (6, 7)],
@@ -128,6 +128,7 @@ class Game:
             print(' [ ERROR ]     Cannot update message. discord.Forbidden!')
             return False
 
+# ! Glitches out when on corner
     async def _get_blast_blocks(self, hero):
         if hero in self.blast_map:
             return self.blast_map[hero]
