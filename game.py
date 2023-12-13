@@ -71,7 +71,8 @@ class Game:
         
         # Define the starting positions for each number of players
         starting_positions = {
-            1: [(0, 0)],
+            # ! Remove the 1
+            1: [(9, 9)],
             2: [(0, 0), (8, 5)],
             3: [(4, 2), (1, 5), (7, 5)],
             4: [(1, 1), (8, 1), (1, 8), (8, 8)],
@@ -241,14 +242,15 @@ class Game:
         for direction in directions:
             x = player.x_pos + direction[0]
             y = player.y_pos + direction[1]
-            self.grid[y, x] = -1
+            if 10 > x > -1 and 10 > y > -1:
+                self.grid[y, x] = -1
 
-            other_player = await self._get_player(x, y)
-            if other_player:
-                await other_player.die()
-                killed.append(other_player)
-                killed_string += other_player.user_class.display_name + ' '
-                player.kills.append(other_player)
+                other_player = await self._get_player(x, y)
+                if other_player and not other_player.is_dead:
+                    await other_player.die()
+                    killed.append(other_player)
+                    killed_string += other_player.user_class.display_name + ' '
+                    player.kills.append(other_player)
 
         player.energy -= energy_cost
 
@@ -261,10 +263,3 @@ class Game:
             else:
                 return 'Sucessfully blasted! You killed: ' + killed_string + \
                     ' But I do not have the permission to send the game state :('
-        else:
-        
-            if killed_string == '':
-                return 'Successfully blasted! You did not kill anyone.'   
-            else:
-                return 'Sucessfully blasted! You killed: ' + killed_string
-                

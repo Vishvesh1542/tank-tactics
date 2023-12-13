@@ -24,7 +24,6 @@ def add_commands() -> None:
     add_command('blast', 'Blast in a game.', blast, Option(
         type=int, name='id', description='The id of the game.', required=False
     ))
-    add_command('image', 'nothing', f)
     # Our add command function only supports 2 variables so making an exception
     @commands.slash_command(name='info', description='view the info of any tank!',
     options=[Option(int, name='x', description='The x coordinate of the tank. (1-10)',
