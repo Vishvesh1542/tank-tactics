@@ -97,6 +97,11 @@ class Game:
 
             index += 1
 
+    async def add_energy(self):
+        for player in self.players:
+            if not player.is_dead:
+                player.energy += 1 
+
     def get_direction(direction_raw: str) -> tuple:
         direction_raw = direction_raw.lower()
         maps = {'w': ['w', 'up', '↑'],
@@ -124,7 +129,7 @@ class Game:
                 alive_players.append(player)
 
         if len(alive_players) < 2:
-            return self.finish_game()
+            return await self.finish_game()
 
         # Convert the OpenCV image to bytes
         _, img_bytes = cv2.imencode('.png', game_state_image)
@@ -147,7 +152,7 @@ class Game:
             print(' [ ERROR ]     Cannot update message. discord.Forbidden!')
             return False
         
-    def finish_game(self):
+    async def finish_game(self):
         embed = discord.Embed(title=
         f'Tank Tactics! id: `{self.game_id}` Game ended!')
         self.is_game_done = True
@@ -160,6 +165,8 @@ class Game:
                 embed.add_field(name=f'{player.user_class.name}',
                                 value=f'x: {player.x_pos}\ny: {player.y_pos}\nKills: {len(player.kills)}',
                                 inline=False)
+        await self.update_channel.send(embed=embed)
+
 
     async def _get_blast_blocks(self, hero):
         if hero in self.blast_map:

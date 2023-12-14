@@ -86,9 +86,23 @@ async def start(variables: list):
     _id = games[ctx.channel_id]['id']
     game = Game(games[ctx.channel_id]['players'],
                  update_channel=ctx.channel, _id=_id)
+    game.channel_id = ctx.channel_id
     games[ctx.channel_id]['game'] = game
     await game.update()
+    await add_energy([game])
     print('[ INFO ]     game started')
+
+async def add_energy(game):
+    global games, used_ids
+    await game[0].add_energy()
+    print("Gave energy")
+    if game[0].is_game_done:
+        games.pop(game[0].channel_id)
+        used_ids.remove(game[0].game_id)
+        print("Game done")
+        
+    else:
+        await call(time.time() + 5, add_energy, game)
 
 async def is_in_game(ctx: discord.ApplicationContext, _id: int=None):   
     if not _id:
@@ -125,7 +139,7 @@ async def new(ctx: discord.ApplicationContext):
     embed = discord.Embed(title=f"`{ctx.user.name}` hosted a game!")
     
     # There is already a game.
-    if ctx.channel_id in games:
+    if ctx.channel_id in games and not games[ctx.channel_id]['game'].is_game_done:
         embed.add_field(name='Sorry, a game already exists in the chanel.', value='')
         embed.add_field(name='Use another channel for starting a new game.',
                         value='use `/new`', inline=False)
