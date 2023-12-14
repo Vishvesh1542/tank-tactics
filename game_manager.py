@@ -172,7 +172,6 @@ async def blast(ctx: discord.ApplicationContext, _id: int=None):
 
     return await game['game'].blast(player_class)
     
-# ! May return dead players if multiple there.
 async def info(ctx: discord.ApplicationContext, x: int, y: int, _id: int=None):
     values = await is_in_game(ctx, _id)
 
@@ -185,14 +184,16 @@ async def info(ctx: discord.ApplicationContext, x: int, y: int, _id: int=None):
         return "Sorry, only players of the game can view this."
     
     player = await game['game']._get_player(x, y)
-    if not player:
-        return "No one is in that block."
 
-    embed = discord.Embed(title=f"Player: `{player.user_class.display_name}`")
-    embed.set_thumbnail(url=player.user_class.avatar.url)
-    embed.add_field(name="energy: ", value=str(player.energy), inline=False)
-    embed.add_field(name="kills", value=str(len(player.kills)))
-    embed.add_field(name='alive', value=str(not player.is_dead))
-    return embed
+    for p in player:
+        if not p.is_dead:
+            embed = discord.Embed(title=f"Player: `{player.user_class.display_name}`")
+            embed.set_thumbnail(url=player.user_class.avatar.url)
+            embed.add_field(name="energy: ", value=str(player.energy), inline=False)
+            embed.add_field(name="kills", value=str(len(player.kills)))
+            embed.add_field(name='alive', value=str(not player.is_dead))
+            return embed
+
+    return "No one is in that block."
 
     

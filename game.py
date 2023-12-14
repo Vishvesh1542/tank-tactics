@@ -22,6 +22,8 @@ class Player:
         self.x_pos = 0
         self.y_pos = 0
 
+        self.killed_by = None
+
         self.is_dead = False
         self.kills = []
         self.hero = 'becky'
@@ -29,9 +31,10 @@ class Player:
         # ! Change back
         self.energy = 1000
     
-    async def die(self) -> None:
+    async def die(self, killed_by) -> None:
         self.is_dead = True
-    
+        self.killed_by = killed_by
+
     def fetch_image(self) -> None:
         self.block = _get_image(self.block_number)
 
@@ -45,6 +48,7 @@ class Game:
         self.update_channel = update_channel
         self.previous_message = None
         self.game_id = _id
+        self.is_game_done = False
 
         # creating grid
         if len(players) < 10:
@@ -107,13 +111,27 @@ class Game:
     async def update(self) -> None:
         game_state_image = generate_image(self.grid, self.players)
 
+        alive_players = []
+
+        embed = discord.Embed(title=
+        f'Tank Tactics! id: `{self.game_id}`')
+
+        for player in self.players:
+            if not player.is_dead:
+                embed.add_field(name=f'{player.user_class.name}',
+                                                value=f'x: {player.x_pos}\ny: {player.y_pos}\nKills: {len(player.kills)}',
+                                                inline=False)
+                alive_players.append(player)
+
+        if len(alive_players) < 2:
+            return self.finish_game()
+
         # Convert the OpenCV image to bytes
         _, img_bytes = cv2.imencode('.png', game_state_image)
         img_bytes = img_bytes.tobytes()
 
         # Create an embed with an image
-        embed = discord.Embed(title=
-                f'Tank Tactics! id: `{self.game_id}`')
+
         embed.set_image(url="attachment://image.png")
 
         old_message = self.previous_message
@@ -128,8 +146,21 @@ class Game:
         except discord.Forbidden:
             print(' [ ERROR ]     Cannot update message. discord.Forbidden!')
             return False
+        
+    def finish_game(self):
+        embed = discord.Embed(title=
+        f'Tank Tactics! id: `{self.game_id}` Game ended!')
+        self.is_game_done = True
+        for player in self.players:
+            if not player.is_dead:
+                embed.add_field(name=f'{player.user_class.name} :crown:',
+                                                value=f'x: {player.x_pos}\ny: {player.y_pos}\nKills: {len(player.kills)}',
+                                                inline=False)
+            else:
+                embed.add_field(name=f'{player.user_class.name}',
+                                value=f'x: {player.x_pos}\ny: {player.y_pos}\nKills: {len(player.kills)}',
+                                inline=False)
 
-# ! Glitches out when on corner
     async def _get_blast_blocks(self, hero):
         if hero in self.blast_map:
             return self.blast_map[hero]
@@ -247,9 +278,10 @@ class Game:
 
                 other_player = await self._get_player(x, y)
                 if other_player and not other_player.is_dead:
-                    await other_player.die()
+                    await other_player.die(player.user_class.display_name)
                     killed.append(other_player)
                     killed_string += other_player.user_class.display_name + ' '
+
                     player.kills.append(other_player)
 
         player.energy -= energy_cost
